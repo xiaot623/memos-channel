@@ -32,10 +32,15 @@ type fakeClient struct {
 	memos       map[string]*v1pb.Memo
 	attachments map[string]int
 	seq         int
+	instanceURL string
 }
 
 func (f *fakeClient) GetInstanceProfile(context.Context) (*v1pb.InstanceProfile, error) {
-	return &v1pb.InstanceProfile{InstanceUrl: "https://memos.example"}, nil
+	url := f.instanceURL
+	if url == "" {
+		url = "https://memos.example"
+	}
+	return &v1pb.InstanceProfile{InstanceUrl: url}, nil
 }
 
 func (f *fakeClient) Authenticated(token string) AuthedClient {
@@ -211,12 +216,16 @@ func (s staticAttachment) Download(context.Context) (*channel.Attachment, error)
 }
 
 func newTestCore(t *testing.T, backend Client) (*Core, *fakeAdapter, *store.Store) {
+	return newTestCoreWithPublicURL(t, backend, "")
+}
+
+func newTestCoreWithPublicURL(t *testing.T, backend Client, publicURL string) (*Core, *fakeAdapter, *store.Store) {
 	t.Helper()
 	st := store.New(filepath.Join(t.TempDir(), "data.txt"))
 	if err := st.Init(); err != nil {
 		t.Fatalf("init store: %v", err)
 	}
-	c := NewWithClient(st, backend, "http://localhost:5230")
+	c := NewWithClient(st, backend, publicURL)
 	adapter := &fakeAdapter{}
 	c.Register(adapter)
 	return c, adapter, st
@@ -240,7 +249,7 @@ func TestStartRequiresAdapter(t *testing.T) {
 		users:       map[string]*v1pb.User{},
 		memos:       map[string]*v1pb.Memo{},
 		attachments: map[string]int{},
-	}, "http://localhost")
+	}, "")
 	if err := c.Start(context.Background()); err == nil {
 		t.Fatal("expected error when no adapters are registered")
 	}
@@ -324,7 +333,7 @@ func TestHandleCreateMemoAndSearch(t *testing.T) {
 		t.Fatalf("expected saved, got %#v", adapter.replies)
 	}
 	saved := adapter.replies[0]
-	if saved.Memo == nil || saved.Memo.UID != "memo-1" || saved.Memo.URL != "http://localhost:5230/memos/memo-1" {
+	if saved.Memo == nil || saved.Memo.UID != "memo-1" || saved.Memo.URL != "" {
 		t.Fatalf("unexpected memo info: %#v", saved.Memo)
 	}
 	if backend.attachments["memos/memo-1"] != 1 {
@@ -398,5 +407,69 @@ func TestHandleMediaGroupReusesMemo(t *testing.T) {
 	}
 	if backend.seq != 1 {
 		t.Fatalf("expected a single memo, created %d", backend.seq)
+	}
+}
+
+func boundSaveBackend() *fakeClient {
+	return &fakeClient{
+		users: map[string]*v1pb.User{
+			"tok": {Name: "users/alice", DisplayName: "Alice"},
+		},
+		memos:       map[string]*v1pb.Memo{},
+		attachments: map[string]int{},
+	}
+}
+
+func saveBoundNote(t *testing.T, c *Core, adapter *fakeAdapter) *channel.MemoInfo {
+	t.Helper()
+	adapter.replies = nil
+	ev := sampleEvent(channel.KindMessage)
+	ev.TextMarkdown = "note body"
+	if err := c.Handle(context.Background(), ev); err != nil {
+		t.Fatal(err)
+	}
+	if len(adapter.replies) != 1 || adapter.replies[0].Memo == nil {
+		t.Fatalf("expected saved memo, got %#v", adapter.replies)
+	}
+	return adapter.replies[0].Memo
+}
+
+func TestMemoURLPrefersPublicHTTPS(t *testing.T) {
+	backend := boundSaveBackend()
+	c, adapter, st := newTestCoreWithPublicURL(t, backend, "https://keep.example/")
+	st.Set(channel.Telegram, "42", "tok")
+	if err := c.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	got := saveBoundNote(t, c, adapter)
+	if got.URL != "https://keep.example/memos/memo-1" {
+		t.Fatalf("url: got %q", got.URL)
+	}
+}
+
+func TestMemoURLFallsBackToInstanceHTTPS(t *testing.T) {
+	backend := boundSaveBackend()
+	c, adapter, st := newTestCoreWithPublicURL(t, backend, "http://keep.example")
+	st.Set(channel.Telegram, "42", "tok")
+	if err := c.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	got := saveBoundNote(t, c, adapter)
+	if got.URL != "https://memos.example/memos/memo-1" {
+		t.Fatalf("url: got %q", got.URL)
+	}
+}
+
+func TestMemoURLIgnoresHTTPOrigins(t *testing.T) {
+	backend := boundSaveBackend()
+	backend.instanceURL = "http://memos:5230"
+	c, adapter, st := newTestCoreWithPublicURL(t, backend, "http://localhost:5230")
+	st.Set(channel.Telegram, "42", "tok")
+	if err := c.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	got := saveBoundNote(t, c, adapter)
+	if got.URL != "" {
+		t.Fatalf("url: got %q, want empty", got.URL)
 	}
 }

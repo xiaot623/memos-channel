@@ -12,11 +12,11 @@ import (
 const mediaGroupTTL = 5 * time.Minute
 
 type Core struct {
-	store    *store.Store
-	backend  Client
-	baseURL  string
-	adapters map[string]channel.Adapter
-	groups   *groupCache
+	store     *store.Store
+	backend   Client
+	publicURL string
+	adapters  map[string]channel.Adapter
+	groups    *groupCache
 
 	instanceURL string
 
@@ -25,19 +25,19 @@ type Core struct {
 	edits  map[string]*pendingEdit
 }
 
-func New(st *store.Store, mc *memos.Client, baseURL string) *Core {
-	return NewWithClient(st, wrapMemos(mc), baseURL)
+func New(st *store.Store, mc *memos.Client, publicURL string) *Core {
+	return NewWithClient(st, wrapMemos(mc), publicURL)
 }
 
-func NewWithClient(st *store.Store, backend Client, baseURL string) *Core {
+func NewWithClient(st *store.Store, backend Client, publicURL string) *Core {
 	return &Core{
-		store:    st,
-		backend:  backend,
-		baseURL:  baseURL,
-		adapters: make(map[string]channel.Adapter),
-		groups:   newGroupCache(mediaGroupTTL),
-		browse:   make(map[string]*browseState),
-		edits:    make(map[string]*pendingEdit),
+		store:     st,
+		backend:   backend,
+		publicURL: publicURL,
+		adapters:  make(map[string]channel.Adapter),
+		groups:    newGroupCache(mediaGroupTTL),
+		browse:    make(map[string]*browseState),
+		edits:     make(map[string]*pendingEdit),
 	}
 }
 

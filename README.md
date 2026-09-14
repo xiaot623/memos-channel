@@ -58,6 +58,7 @@ Create a `.env` file in the project's root directory:
 
 ```env
 SERVER_ADDR=https://your-memos.example
+BASE_URL=https://your-memos.example
 BOT_TOKEN=your_telegram_bot_token
 BOT_PROXY_ADDR=https://api.your_proxy_addr.com
 ALLOWED_USERNAMES=user1,user2,user3
@@ -67,6 +68,7 @@ DATA=data.txt
 ### Configuration Options
 
 - `SERVER_ADDR` (required): Memos HTTP origin used by the Connect client. `https://host` is preferred. The historical `dns:host:port` prefix is still stripped and treated as `http://host:port`.
+- `BASE_URL` (optional): Public `https://` origin for Telegram Open buttons and saved-memo links. `http://` values are ignored. If unset, memogram falls back to the Memos instance profile URL when that is also `https://`. Otherwise no Open button is shown.
 - `BOT_TOKEN`: Telegram bot token. If set, the Telegram adapter is registered.
 - `BOT_PROXY_ADDR`: Optional Telegram Bot API proxy. Leave empty if not needed.
 - `ALLOWED_USERNAMES`: Optional comma-separated Telegram usernames (no `@`). Telegram-only inbound firewall.
@@ -119,6 +121,7 @@ Notes:
    ```sh
    docker run -d --name memogram \
      -e SERVER_ADDR=dns:localhost:5230 \
+     -e BASE_URL=https://your-memos.example \
      -e BOT_TOKEN=your_telegram_bot_token \
      memogram
    ```
@@ -133,6 +136,7 @@ This can sit next to Memos in the same compose file:
 
    ```sh
    SERVER_ADDR=dns:yourMemosUrl.com:5230
+   BASE_URL=https://your-memos.example
    BOT_TOKEN=your_telegram_bot_token
    ```
 
@@ -151,7 +155,7 @@ This can sit next to Memos in the same compose file:
 ### Interaction Commands
 
 - `/start <access_token>`: Bind this Telegram user to a Memos access token.
-- `/list`: Show the 10 most recently updated memos. Tap a row for the full note; use Prev/Next to page. From a note: Back, Edit, Delete.
+- `/list`: Show the 10 most recently updated memos. Tap a row for the full note; use Prev/Next to page. From a note: Back, Edit, Delete, and Open when `BASE_URL` (or the instance https URL) is set.
 - `/tags`: List tags, then the same paged list filtered to that tag.
 - `/search <words>`: Same list card as `/list`, filtered by memo content.
 - Send text: save as a memo. After Edit, the next text overwrites the open memo (`/cancel` aborts).

@@ -54,11 +54,12 @@ func (a *Adapter) replyCallback(ctx context.Context, origin channel.Origin, msg 
 		if msg.Memo.Pinned {
 			pinnedMarker = "📌"
 		}
+		text, parseMode := savedReplyText("Memo updated", msg.Memo, pinnedMarker)
 		_, err := a.bot.EditMessageText(ctx, &bot.EditMessageTextParams{
 			ChatID:      chatID,
 			MessageID:   messageID,
-			Text:        fmt.Sprintf("Memo updated as %s with [%s](%s) %s", msg.Memo.Visibility, msg.Memo.Name, msg.Memo.URL, pinnedMarker),
-			ParseMode:   models.ParseModeMarkdown,
+			Text:        text,
+			ParseMode:   parseMode,
 			ReplyMarkup: keyboard(msg.Actions, msg.Memo.Name),
 		})
 		if err != nil {
@@ -130,10 +131,11 @@ func (a *Adapter) replyChat(ctx context.Context, origin channel.Origin, msg chan
 		if msg.Memo == nil {
 			return fmt.Errorf("missing memo for saved reply")
 		}
+		text, parseMode := savedReplyText("Content saved", msg.Memo, "")
 		params := &bot.SendMessageParams{
 			ChatID:              chatID,
-			Text:                fmt.Sprintf("Content saved as %s with [%s](%s)", msg.Memo.Visibility, msg.Memo.Name, msg.Memo.URL),
-			ParseMode:           models.ParseModeMarkdown,
+			Text:                text,
+			ParseMode:           parseMode,
 			DisableNotification: true,
 			ReplyMarkup:         keyboard(msg.Actions, msg.Memo.Name),
 		}
@@ -175,6 +177,22 @@ func (a *Adapter) editBrowse(ctx context.Context, origin channel.Origin, msg cha
 		CallbackQueryID: origin.AckID,
 	})
 	return err
+}
+
+func savedReplyText(prefix string, memo *channel.MemoInfo, extra string) (string, models.ParseMode) {
+	var text string
+	if memo.URL != "" {
+		text = fmt.Sprintf("%s as %s with [%s](%s)", prefix, memo.Visibility, memo.Name, memo.URL)
+	} else {
+		text = fmt.Sprintf("%s as %s with %s", prefix, memo.Visibility, memo.Name)
+	}
+	if extra != "" {
+		text += " " + extra
+	}
+	if memo.URL != "" {
+		return text, models.ParseModeMarkdown
+	}
+	return text, ""
 }
 
 func usageText(prompt string) string {

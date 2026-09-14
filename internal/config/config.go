@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,6 +13,7 @@ import (
 
 type Config struct {
 	ServerAddr       string `env:"SERVER_ADDR,required"`
+	PublicURL        string `env:"BASE_URL"`
 	Data             string `env:"DATA"`
 	BotToken         string `env:"BOT_TOKEN"`
 	BotProxyAddr     string `env:"BOT_PROXY_ADDR"`
@@ -48,16 +50,34 @@ func Load() (*Config, error) {
 	}
 	cfg.Data = abs
 
+	if raw := strings.TrimSpace(cfg.PublicURL); raw != "" {
+		cfg.PublicURL = HTTPSOrigin(raw)
+		if cfg.PublicURL == "" {
+			slog.Warn("BASE_URL ignored; must be an https origin", "base_url", raw)
+		}
+	} else {
+		cfg.PublicURL = ""
+	}
+
 	return &cfg, nil
 }
 
-func (c *Config) BaseURL() string {
-	baseURL := c.ServerAddr
-	baseURL = strings.TrimPrefix(baseURL, "dns:")
-	if !strings.HasPrefix(baseURL, "http://") && !strings.HasPrefix(baseURL, "https://") {
-		baseURL = "http://" + baseURL
+func (c *Config) ServerURL() string {
+	serverURL := c.ServerAddr
+	serverURL = strings.TrimPrefix(serverURL, "dns:")
+	if !strings.HasPrefix(serverURL, "http://") && !strings.HasPrefix(serverURL, "https://") {
+		serverURL = "http://" + serverURL
 	}
-	return baseURL
+	return serverURL
+}
+
+func HTTPSOrigin(s string) string {
+	s = strings.TrimSpace(s)
+	s = strings.TrimRight(s, "/")
+	if !strings.HasPrefix(s, "https://") || s == "https://" {
+		return ""
+	}
+	return s
 }
 
 func (c *Config) TelegramEnabled() bool {

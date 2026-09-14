@@ -9,6 +9,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/usememos/memogram/internal/channel"
+	"github.com/usememos/memogram/internal/config"
 	"github.com/usememos/memogram/internal/memos"
 	v1pb "github.com/usememos/memos/proto/gen/api/v1"
 )
@@ -25,7 +26,10 @@ func (c *Core) Start(ctx context.Context) error {
 	} else {
 		slog.Info("instance profile", slog.Any("profile", profile))
 		if profile != nil {
-			c.instanceURL = profile.InstanceUrl
+			c.instanceURL = config.HTTPSOrigin(profile.InstanceUrl)
+			if strings.TrimSpace(profile.InstanceUrl) != "" && c.instanceURL == "" {
+				slog.Warn("instance URL ignored; must be an https origin", "instance_url", profile.InstanceUrl)
+			}
 		}
 	}
 
@@ -89,9 +93,12 @@ func (c *Core) token(ev channel.InboundEvent) (string, bool) {
 }
 
 func (c *Core) memoURL(uid string) string {
-	base := strings.TrimRight(c.baseURL, "/")
-	if c.instanceURL != "" {
-		base = strings.TrimRight(c.instanceURL, "/")
+	base := config.HTTPSOrigin(c.publicURL)
+	if base == "" {
+		base = config.HTTPSOrigin(c.instanceURL)
+	}
+	if base == "" {
+		return ""
 	}
 	return base + "/memos/" + uid
 }

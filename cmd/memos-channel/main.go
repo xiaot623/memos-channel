@@ -25,7 +25,7 @@ func main() {
 		panic(err)
 	}
 
-	c := core.New(st, memos.NewClient(cfg.BaseURL()), cfg.BaseURL())
+	c := core.New(st, memos.NewClient(cfg.ServerURL()), cfg.PublicURL)
 	if cfg.TelegramEnabled() {
 		c.Register(telegram.New(telegram.Options{
 			Token:            cfg.BotToken,

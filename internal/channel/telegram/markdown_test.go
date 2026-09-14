@@ -73,3 +73,30 @@ func TestBrowseDetailOmitsOpenWithoutURL(t *testing.T) {
 		t.Fatalf("rows: %+v", kb)
 	}
 }
+
+func TestSavedReplyTextWithURL(t *testing.T) {
+	text, mode := savedReplyText("Content saved", &channel.MemoInfo{
+		Name:       "memos/abc",
+		Visibility: "PRIVATE",
+		URL:        "https://keep.example/memos/abc",
+	}, "")
+	if text != "Content saved as PRIVATE with [memos/abc](https://keep.example/memos/abc)" {
+		t.Fatalf("text: %q", text)
+	}
+	if mode != models.ParseModeMarkdown {
+		t.Fatalf("mode: %q", mode)
+	}
+}
+
+func TestSavedReplyTextWithoutURL(t *testing.T) {
+	text, mode := savedReplyText("Content saved", &channel.MemoInfo{
+		Name:       "memos/abc",
+		Visibility: "PRIVATE",
+	}, "")
+	if text != "Content saved as PRIVATE with memos/abc" {
+		t.Fatalf("text: %q", text)
+	}
+	if mode != "" {
+		t.Fatalf("mode: %q", mode)
+	}
+}
