@@ -1,39 +1,80 @@
 # Memogram
 
-**Memogram** is an easy to use integration service for syncing messages and images from a Telegram bot into your Memos.
+**Memogram** is a channel adapter for [Memos](https://www.usememos.com/). It syncs messages and images from Telegram into your instance. The process is a single binary: adapters speak the platform protocol, Core talks to Memos.
+
+Telegram is the only adapter today. Inbound is always a long connection (Bot API long poll). The process does not expose an HTTP server.
+
+## Architecture
+
+```text
+  Telegram user
+        |
+        |  Bot API long poll  (no inbound HTTP)
+        v
++---------------------------+
+|  telegram Adapter         |
+|  ACL, entities, forward,  |
+|  media download, keyboard |
++-------------+-------------+
+              |  InboundEvent
+              v
++---------------------------+       +----------------------+
+|  Core                     |------>|  Binding store       |
+|  bind / create / search   |       |  data.txt            |
+|  visibility / pin         |       |  (channel, user_id)  |
++-------------+-------------+       |  -> Memos token      |
+              |                     +----------------------+
+              |  Connect HTTP + user Bearer token
+              v
+         Memos instance
+              |
+              |  OutboundMessage
+              v
+        telegram Adapter.Reply
+```
+
+Rules:
+
+- Core never imports a bot SDK. Adapters never call the Memos API.
+- `data.txt` is the identity map, not a note store. Memos holds the content.
+- A channel is registered only when its credentials are present. Startup fails if none are enabled.
 
 ## Prerequisites
 
-- Memos service
-- Telegram Bot
+- A running Memos instance
+- A Telegram bot token (to enable the Telegram adapter)
 
 ## Installation
 
-Download the binary files for your operating system from the [Releases](https://github.com/usememos/telegram-integration/releases) page.
+Download the binary for your OS from the [Releases](https://github.com/usememos/telegram-integration/releases) page, or build from source:
+
+```sh
+go build -o memogram ./cmd/memos-channel
+```
 
 ## Configuration
 
-Create a `.env` file in the project's root directory and add the following configuration:
+Create a `.env` file in the project's root directory:
 
 ```env
-SERVER_ADDR=dns:localhost:5230
+SERVER_ADDR=https://your-memos.example
 BOT_TOKEN=your_telegram_bot_token
 BOT_PROXY_ADDR=https://api.your_proxy_addr.com
 ALLOWED_USERNAMES=user1,user2,user3
+DATA=data.txt
 ```
 
 ### Configuration Options
 
-- `SERVER_ADDR`: The gRPC server address where Memos is running
-- `BOT_TOKEN`: Your Telegram bot token
-- `BOT_PROXY_ADDR`: Optional proxy address for Telegram API (leave empty if not needed)
-- `ALLOWED_USERNAMES`: Optional comma-separated list of allowed usernames (without @ symbol)
+- `SERVER_ADDR` (required): Memos HTTP origin used by the Connect client. `https://host` is preferred. The historical `dns:host:port` prefix is still stripped and treated as `http://host:port`.
+- `BOT_TOKEN`: Telegram bot token. If set, the Telegram adapter is registered.
+- `BOT_PROXY_ADDR`: Optional Telegram Bot API proxy. Leave empty if not needed.
+- `ALLOWED_USERNAMES`: Optional comma-separated Telegram usernames (no `@`). Telegram-only inbound firewall.
+- `DATA`: Binding file path. Defaults to `data.txt`. Keep this file private; it stores access tokens.
 
 ### Username Restrictions
 
-The `ALLOWED_USERNAMES` environment variable allows you to restrict bot usage to specific Telegram users. When set, only users with usernames in this list will be able to interact with the bot.
-
-#### Examples
+When `ALLOWED_USERNAMES` is set, only listed Telegram usernames can use the bot.
 
 1. Allow specific users:
 
@@ -41,20 +82,18 @@ The `ALLOWED_USERNAMES` environment variable allows you to restrict bot usage to
    ALLOWED_USERNAMES=alex,john,emily
    ```
 
-2. Allow all users (leave empty or remove the variable):
+2. Allow all users (leave empty or omit the variable):
 
    ```env
    ALLOWED_USERNAMES=
    ```
 
-#### Important Notes
+Notes:
 
-- Usernames must not include the @ symbol
-- The bot will only respond to users who have a username set in their Telegram account
+- Usernames must not include the `@` symbol
 - Matching is case-insensitive and trims whitespace
-- Users not in the allowed list will receive an error message: "you are not authorized to use this bot"
-
-The `SERVER_ADDR` should be a gRPC server address that the Memos is running on. It follows the [gRPC Name Resolution](https://github.com/grpc/grpc/blob/master/doc/naming.md).
+- If the allowlist is set, accounts without a Telegram username are rejected
+- Users not in the list receive: `your account <name> is not allowed to use this bot`
 
 ## Usage
 
@@ -62,57 +101,57 @@ The `SERVER_ADDR` should be a gRPC server address that the Memos is running on. 
 
 #### Starting with binary
 
-1. Download and extract the released binary file;
-2. Create a `.env` file in the same directory as the binary file;
-3. Run the executable in the terminal:
+1. Download and extract the released binary, or build `./cmd/memos-channel`.
+2. Create a `.env` file in the same directory as the binary.
+3. Run:
 
    ```sh
    ./memogram
    ```
 
-4. Once the bot is running, you can interact with it via your Telegram bot.
+4. Talk to the bot in Telegram.
 
 #### Starting with Docker
 
-Or you can start the service with Docker:
+1. Build the image: `docker build -t memogram .`
+2. Run with environment variables:
 
-1.  Build the Docker image: `docker build -t memogram .`
-2.  Run the Docker container with the required environment variables:
-
-    ```sh
-    docker run -d --name memogram \
-    -e SERVER_ADDR=dns:localhost:5230 \
-    -e BOT_TOKEN=your_telegram_bot_token \
-    memogram
-    ```
-
-3.  The Memogram service should now be running inside the Docker container. You can interact with it via your Telegram bot.
+   ```sh
+   docker run -d --name memogram \
+     -e SERVER_ADDR=dns:localhost:5230 \
+     -e BOT_TOKEN=your_telegram_bot_token \
+     memogram
+   ```
 
 #### Starting with Docker Compose
 
-Or you can start the service with Docker Compose. This can be combined with the `memos` itself in the same compose file:
+This can sit next to Memos in the same compose file:
 
-1.  Create a folder where the service will be located.
-2.  Clone this repository in a subfolder `git clone https://github.com/usememos/telegram-integration memogram`
-3.  Create `.env` file
-    ```sh
-    SERVER_ADDR=dns:yourMemosUrl.com:5230
-    BOT_TOKEN=your_telegram_bot_token
-    ```
-4.  Create Docker Compose `docker-compose.yml` file:
-    ```yaml
-    services:
-      memogram:
-        env_file: .env
-        build: memogram
-        container_name: memogram
-    ```
-5.  Run the bot via `docker compose up -d`
-6.  The Memogram service should now be running inside the Docker container. You can interact with it via your Telegram bot.
+1. Create a folder for the service.
+2. Clone this repository into a subfolder: `git clone https://github.com/usememos/telegram-integration memogram`
+3. Create `.env`:
+
+   ```sh
+   SERVER_ADDR=dns:yourMemosUrl.com:5230
+   BOT_TOKEN=your_telegram_bot_token
+   ```
+
+4. Create `docker-compose.yml`:
+
+   ```yaml
+   services:
+     memogram:
+       env_file: .env
+       build: memogram
+       container_name: memogram
+   ```
+
+5. Start with `docker compose up -d`.
 
 ### Interaction Commands
 
-- `/start <access_token>`: Start the bot with your Memos access token.
-- Send text messages: Save the message content as a memo.
-- Send files (photos, documents): Save the files as resources in a memo.
-- `/search <words>`: Search for the memos.
+- `/start <access_token>`: Bind this Telegram user to a Memos access token.
+- Send text: save as a memo.
+- Send files (photos, documents, voice, video): attach them to a memo.
+- Public / Private / Pin buttons: update the saved memo.
+- `/search <words>`: search your memos.
