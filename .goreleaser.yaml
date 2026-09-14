@@ -6,7 +6,7 @@ before:
     - go mod tidy
 
 builds:
-  - main: ./bin/memogram
+  - main: ./cmd/memos-channel
     binary: memogram
     goos:
       - linux

@@ -13,7 +13,10 @@ require (
 	github.com/joho/godotenv v1.5.1
 )
 
-require connectrpc.com/connect v1.19.1
+require (
+	connectrpc.com/connect v1.19.1
+	golang.org/x/sync v0.23.0
+)
 
 require google.golang.org/genproto v0.0.0-20260316180232-0b37fe3546d5 // indirect
 

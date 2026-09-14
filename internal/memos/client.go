@@ -1,4 +1,4 @@
-package memogram
+package memos
 
 import (
 	"net/http"
@@ -6,7 +6,7 @@ import (
 	"github.com/usememos/memos/proto/gen/api/v1/apiv1connect"
 )
 
-type MemosClient struct {
+type Client struct {
 	baseURL string
 
 	InstanceService   apiv1connect.InstanceServiceClient
@@ -16,12 +16,10 @@ type MemosClient struct {
 	AttachmentService apiv1connect.AttachmentServiceClient
 }
 
-// NewMemosClient creates a new client using Connect protocol
-// baseURL should be the full HTTP URL (e.g., "http://localhost:8081")
-func NewMemosClient(baseURL string) *MemosClient {
+func NewClient(baseURL string) *Client {
 	httpClient := http.DefaultClient
 
-	return &MemosClient{
+	return &Client{
 		baseURL:           baseURL,
 		InstanceService:   apiv1connect.NewInstanceServiceClient(httpClient, baseURL),
 		AuthService:       apiv1connect.NewAuthServiceClient(httpClient, baseURL),
@@ -31,8 +29,7 @@ func NewMemosClient(baseURL string) *MemosClient {
 	}
 }
 
-// NewAuthenticatedClient creates a new client with authentication
-func (c *MemosClient) NewAuthenticatedClient(accessToken string) *MemosClient {
+func (c *Client) NewAuthenticatedClient(accessToken string) *Client {
 	httpClient := &http.Client{
 		Transport: &authTransport{
 			token:     accessToken,
@@ -40,7 +37,7 @@ func (c *MemosClient) NewAuthenticatedClient(accessToken string) *MemosClient {
 		},
 	}
 
-	return &MemosClient{
+	return &Client{
 		baseURL:           c.baseURL,
 		InstanceService:   apiv1connect.NewInstanceServiceClient(httpClient, c.baseURL),
 		AuthService:       apiv1connect.NewAuthServiceClient(httpClient, c.baseURL),
@@ -50,7 +47,6 @@ func (c *MemosClient) NewAuthenticatedClient(accessToken string) *MemosClient {
 	}
 }
 
-// authTransport adds Authorization header to all HTTP requests
 type authTransport struct {
 	token     string
 	transport http.RoundTripper

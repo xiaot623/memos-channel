@@ -1,4 +1,4 @@
-package memogram
+package telegram
 
 import (
 	"testing"

@@ -19,7 +19,7 @@ fi
 echo "Building for $OS..."
 
 # Build the executable
-go build -o "$OUTPUT" ./bin/memogram/main.go
+go build -o "$OUTPUT" ./cmd/memos-channel
 
 # Output the success message
 echo "Build successful!"

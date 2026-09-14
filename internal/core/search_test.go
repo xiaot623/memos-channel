@@ -1,4 +1,4 @@
-package memogram
+package core
 
 import (
 	"testing"

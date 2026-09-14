@@ -1,11 +1,10 @@
-package memogram
+package memos
 
 import (
 	"fmt"
 	"strings"
 )
 
-// GetNameParentTokens returns the tokens from a resource name.
 func GetNameParentTokens(name string, tokenPrefixes ...string) ([]string, error) {
 	parts := strings.Split(name, "/")
 	if len(parts) != 2*len(tokenPrefixes) {
@@ -25,13 +24,10 @@ func GetNameParentTokens(name string, tokenPrefixes ...string) ([]string, error)
 	return tokens, nil
 }
 
-// ExtractMemoUIDFromName returns the memo UID from a resource name.
-// e.g., "memos/uuid" -> "uuid".
 func ExtractMemoUIDFromName(name string) (string, error) {
 	tokens, err := GetNameParentTokens(name, "memos/")
 	if err != nil {
 		return "", err
 	}
-	id := tokens[0]
-	return id, nil
+	return tokens[0], nil
 }

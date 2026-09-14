@@ -4,7 +4,7 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -o memogram ./bin/memogram
+RUN CGO_ENABLED=0 go build -o memogram ./cmd/memos-channel
 RUN chmod +x memogram
 
 # Run stage
