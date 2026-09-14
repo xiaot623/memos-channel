@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/usememos/memogram/internal/channel"
@@ -83,16 +86,108 @@ func (a *fakeAuthed) UpdateMemo(_ context.Context, memo *v1pb.Memo, _ []string) 
 	}
 	stored.Visibility = memo.Visibility
 	stored.Pinned = memo.Pinned
+	if memo.Content != "" {
+		stored.Content = memo.Content
+		stored.Snippet = memo.Content
+	}
 	return nil
 }
 
-func (a *fakeAuthed) ListMemos(context.Context, int32, string) ([]*v1pb.Memo, error) {
+func (a *fakeAuthed) ListMemos(_ context.Context, pageSize int32, pageToken, _, filter string) (ListMemosPage, error) {
+	if _, err := a.GetCurrentUser(context.Background()); err != nil {
+		return ListMemosPage{}, err
+	}
 	out := make([]*v1pb.Memo, 0, len(a.parent.memos))
 	for _, memo := range a.parent.memos {
+		if !fakeMemoMatches(memo, filter) {
+			continue
+		}
 		clone := *memo
 		out = append(out, &clone)
 	}
-	return out, nil
+	sort.Slice(out, func(i, j int) bool {
+		ti, tj := out[i].GetUpdateTime(), out[j].GetUpdateTime()
+		if ti != nil && tj != nil && !ti.AsTime().Equal(tj.AsTime()) {
+			return ti.AsTime().After(tj.AsTime())
+		}
+		return out[i].Name > out[j].Name
+	})
+	offset := 0
+	if pageToken != "" {
+		offset, _ = strconv.Atoi(pageToken)
+	}
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+	if offset > len(out) {
+		offset = len(out)
+	}
+	end := offset + int(pageSize)
+	next := ""
+	if end < len(out) {
+		next = strconv.Itoa(end)
+	} else {
+		end = len(out)
+	}
+	return ListMemosPage{Memos: out[offset:end], NextPageToken: next}, nil
+}
+
+func (a *fakeAuthed) GetUserStats(context.Context, string) (*v1pb.UserStats, error) {
+	counts := map[string]int32{}
+	for _, memo := range a.parent.memos {
+		for _, tag := range memo.Tags {
+			counts[tag]++
+		}
+	}
+	return &v1pb.UserStats{TagCount: counts}, nil
+}
+
+func (a *fakeAuthed) DeleteMemo(_ context.Context, name string) error {
+	if _, ok := a.parent.memos[name]; !ok {
+		return fmt.Errorf("not found")
+	}
+	delete(a.parent.memos, name)
+	return nil
+}
+
+func fakeMemoMatches(memo *v1pb.Memo, filter string) bool {
+	if strings.TrimSpace(filter) == "" {
+		return true
+	}
+	for _, part := range strings.Split(filter, "&&") {
+		part = strings.TrimSpace(part)
+		switch {
+		case strings.HasPrefix(part, "content.contains(") && strings.HasSuffix(part, ")"):
+			q, err := strconv.Unquote(part[len("content.contains(") : len(part)-1])
+			if err != nil || !strings.Contains(memo.Content, q) {
+				return false
+			}
+		case strings.HasPrefix(part, "creator =="):
+			want, err := strconv.Unquote(strings.TrimSpace(strings.TrimPrefix(part, "creator ==")))
+			if err != nil {
+				return false
+			}
+			if memo.Creator != "" && memo.Creator != want {
+				return false
+			}
+		case strings.HasSuffix(part, " in tags"):
+			want, err := strconv.Unquote(strings.TrimSpace(strings.TrimSuffix(part, " in tags")))
+			if err != nil {
+				return false
+			}
+			found := false
+			for _, tag := range memo.Tags {
+				if tag == want {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func (a *fakeAuthed) CreateAttachment(_ context.Context, _, _ string, _ []byte, memoName string) error {
@@ -242,8 +337,11 @@ func TestHandleCreateMemoAndSearch(t *testing.T) {
 	if err := c.Handle(context.Background(), search); err != nil {
 		t.Fatal(err)
 	}
-	if len(adapter.replies) != 1 || adapter.replies[0].Kind != channel.OutboundSearchList || len(adapter.replies[0].Results) != 1 {
-		t.Fatalf("expected search results, got %#v", adapter.replies)
+	if len(adapter.replies) != 1 || adapter.replies[0].Kind != channel.OutboundBrowse {
+		t.Fatalf("expected search browse list, got %#v", adapter.replies)
+	}
+	if adapter.replies[0].Browse == nil || len(adapter.replies[0].Browse.Items) != 1 {
+		t.Fatalf("expected one search result, got %#v", adapter.replies[0].Browse)
 	}
 }
 

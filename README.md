@@ -151,7 +151,9 @@ This can sit next to Memos in the same compose file:
 ### Interaction Commands
 
 - `/start <access_token>`: Bind this Telegram user to a Memos access token.
-- Send text: save as a memo.
+- `/list`: Show the 10 most recently updated memos. Tap a row for the full note; use Prev/Next to page. From a note: Back, Edit, Delete.
+- `/tags`: List tags, then the same paged list filtered to that tag.
+- `/search <words>`: Same list card as `/list`, filtered by memo content.
+- Send text: save as a memo. After Edit, the next text overwrites the open memo (`/cancel` aborts).
 - Send files (photos, documents, voice, video): attach them to a memo.
 - Public / Private / Pin buttons: update the saved memo.
-- `/search <words>`: search your memos.

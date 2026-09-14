@@ -17,12 +17,19 @@ type Client interface {
 	Authenticated(token string) AuthedClient
 }
 
+type ListMemosPage struct {
+	Memos         []*v1pb.Memo
+	NextPageToken string
+}
+
 type AuthedClient interface {
 	GetCurrentUser(ctx context.Context) (*v1pb.User, error)
 	CreateMemo(ctx context.Context, content string) (*v1pb.Memo, error)
 	GetMemo(ctx context.Context, name string) (*v1pb.Memo, error)
 	UpdateMemo(ctx context.Context, memo *v1pb.Memo, paths []string) error
-	ListMemos(ctx context.Context, pageSize int32, filter string) ([]*v1pb.Memo, error)
+	DeleteMemo(ctx context.Context, name string) error
+	ListMemos(ctx context.Context, pageSize int32, pageToken, orderBy, filter string) (ListMemosPage, error)
+	GetUserStats(ctx context.Context, userName string) (*v1pb.UserStats, error)
 	CreateAttachment(ctx context.Context, filename, contentType string, data []byte, memoName string) error
 }
 
@@ -90,15 +97,37 @@ func (a *authedBackend) UpdateMemo(ctx context.Context, memo *v1pb.Memo, paths [
 	return err
 }
 
-func (a *authedBackend) ListMemos(ctx context.Context, pageSize int32, filter string) ([]*v1pb.Memo, error) {
+func (a *authedBackend) ListMemos(ctx context.Context, pageSize int32, pageToken, orderBy, filter string) (ListMemosPage, error) {
 	resp, err := a.c.MemoService.ListMemos(ctx, connect.NewRequest(&v1pb.ListMemosRequest{
-		PageSize: pageSize,
-		Filter:   filter,
+		PageSize:  pageSize,
+		PageToken: pageToken,
+		OrderBy:   orderBy,
+		Filter:    filter,
+	}))
+	if err != nil {
+		return ListMemosPage{}, err
+	}
+	return ListMemosPage{
+		Memos:         resp.Msg.GetMemos(),
+		NextPageToken: resp.Msg.GetNextPageToken(),
+	}, nil
+}
+
+func (a *authedBackend) GetUserStats(ctx context.Context, userName string) (*v1pb.UserStats, error) {
+	resp, err := a.c.UserService.GetUserStats(ctx, connect.NewRequest(&v1pb.GetUserStatsRequest{
+		Name: userName,
 	}))
 	if err != nil {
 		return nil, err
 	}
-	return resp.Msg.GetMemos(), nil
+	return resp.Msg, nil
+}
+
+func (a *authedBackend) DeleteMemo(ctx context.Context, name string) error {
+	_, err := a.c.MemoService.DeleteMemo(ctx, connect.NewRequest(&v1pb.DeleteMemoRequest{
+		Name: name,
+	}))
+	return err
 }
 
 func (a *authedBackend) CreateAttachment(ctx context.Context, filename, contentType string, data []byte, memoName string) error {

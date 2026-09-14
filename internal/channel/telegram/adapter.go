@@ -58,6 +58,8 @@ func (a *Adapter) Start(ctx context.Context, handle channel.HandleFunc) error {
 
 	commands := []models.BotCommand{
 		{Command: "start", Description: "Start the bot with access token"},
+		{Command: "list", Description: "List latest memos"},
+		{Command: "tags", Description: "Browse memos by tag"},
 		{Command: "search", Description: "Search for the memos"},
 	}
 	if _, err := a.bot.SetMyCommands(ctx, &bot.SetMyCommandsParams{Commands: commands}); err != nil {
@@ -109,8 +111,8 @@ func (a *Adapter) onCallback(ctx context.Context, _ *bot.Bot, update *models.Upd
 		origin.MessageID = strconv.Itoa(msg.ID)
 	}
 
-	parts := strings.Split(update.CallbackQuery.Data, " ")
-	if len(parts) != 2 {
+	parts := strings.SplitN(update.CallbackQuery.Data, " ", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
 		_ = a.Reply(ctx, origin, channel.OutboundMessage{
 			Kind:  channel.OutboundError,
 			Error: "Invalid command",
@@ -163,6 +165,26 @@ func (a *Adapter) messageEvent(m *models.Update) channel.InboundEvent {
 		ev.Command = channel.Command{
 			Name: channel.CommandSearch,
 			Args: strings.TrimSpace(strings.TrimPrefix(text, "/search")),
+		}
+		return ev
+	case text == "/list" || strings.HasPrefix(text, "/list "):
+		ev.Kind = channel.KindCommand
+		ev.Command = channel.Command{
+			Name: channel.CommandList,
+			Args: strings.TrimSpace(strings.TrimPrefix(text, "/list")),
+		}
+		return ev
+	case text == "/tags" || strings.HasPrefix(text, "/tags "):
+		ev.Kind = channel.KindCommand
+		ev.Command = channel.Command{
+			Name: channel.CommandTags,
+			Args: strings.TrimSpace(strings.TrimPrefix(text, "/tags")),
+		}
+		return ev
+	case text == "/cancel" || strings.HasPrefix(text, "/cancel "):
+		ev.Kind = channel.KindCommand
+		ev.Command = channel.Command{
+			Name: channel.CommandCancel,
 		}
 		return ev
 	}

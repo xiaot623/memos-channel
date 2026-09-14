@@ -49,9 +49,16 @@ func (c *Core) Handle(ctx context.Context, ev channel.InboundEvent) error {
 	case channel.KindCommand:
 		switch ev.Command.Name {
 		case channel.CommandStart:
+			c.clearPendingEdit(ev)
 			c.handleBind(ctx, ev)
 		case channel.CommandSearch:
 			c.handleSearch(ctx, ev)
+		case channel.CommandList:
+			c.handleList(ctx, ev)
+		case channel.CommandTags:
+			c.handleTags(ctx, ev)
+		case channel.CommandCancel:
+			c.handleCancel(ctx, ev)
 		default:
 			c.reply(ctx, ev, channel.OutboundMessage{Kind: channel.OutboundError, Error: "Unknown command"})
 		}
@@ -64,12 +71,16 @@ func (c *Core) Handle(ctx context.Context, ev channel.InboundEvent) error {
 }
 
 func (c *Core) reply(ctx context.Context, ev channel.InboundEvent, msg channel.OutboundMessage) {
-	adapter, ok := c.adapters[ev.Channel]
+	c.replyOrigin(ctx, ev.Channel, ev.Origin, msg)
+}
+
+func (c *Core) replyOrigin(ctx context.Context, channelName string, origin channel.Origin, msg channel.OutboundMessage) {
+	adapter, ok := c.adapters[channelName]
 	if !ok {
 		return
 	}
-	if err := adapter.Reply(ctx, ev.Origin, msg); err != nil {
-		slog.Error("failed to reply", slog.Any("err", err), "channel", ev.Channel)
+	if err := adapter.Reply(ctx, origin, msg); err != nil {
+		slog.Error("failed to reply", slog.Any("err", err), "channel", channelName)
 	}
 }
 

@@ -1,6 +1,7 @@
 package core
 
 import (
+	"sync"
 	"time"
 
 	"github.com/usememos/memogram/internal/channel"
@@ -18,6 +19,10 @@ type Core struct {
 	groups   *groupCache
 
 	instanceURL string
+
+	mu     sync.Mutex
+	browse map[string]*browseState
+	edits  map[string]*pendingEdit
 }
 
 func New(st *store.Store, mc *memos.Client, baseURL string) *Core {
@@ -31,6 +36,8 @@ func NewWithClient(st *store.Store, backend Client, baseURL string) *Core {
 		baseURL:  baseURL,
 		adapters: make(map[string]channel.Adapter),
 		groups:   newGroupCache(mediaGroupTTL),
+		browse:   make(map[string]*browseState),
+		edits:    make(map[string]*pendingEdit),
 	}
 }
 

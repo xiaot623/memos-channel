@@ -10,6 +10,11 @@ import (
 )
 
 func (c *Core) handleAction(ctx context.Context, ev channel.InboundEvent) {
+	if channel.IsBrowseAction(ev.Action.Name) {
+		c.handleBrowse(ctx, ev)
+		return
+	}
+
 	token, ok := c.token(ev)
 	if !ok {
 		c.reply(ctx, ev, channel.OutboundMessage{Kind: channel.OutboundPromptBind})

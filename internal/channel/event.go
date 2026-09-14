@@ -1,6 +1,9 @@
 package channel
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 const (
 	Telegram = "telegram"
@@ -18,6 +21,10 @@ type Origin struct {
 	ChatID    string
 	MessageID string
 	AckID     string
+	// Edit tells the adapter to change an existing bot message at MessageID
+	// instead of sending a new one. Used after a pending edit when there is
+	// no callback AckID.
+	Edit bool
 }
 
 type Command struct {
@@ -58,20 +65,44 @@ type OutboundKind int
 const (
 	OutboundSaved OutboundKind = iota
 	OutboundBound
-	OutboundSearchList
 	OutboundError
 	OutboundPromptBind
 	OutboundPromptUsage
+	OutboundBrowse
 )
 
 const (
-	ActionPublic    = "public"
-	ActionPrivate   = "private"
-	ActionProtected = "protected"
-	ActionPin       = "pin"
+	ActionPublic        = "public"
+	ActionPrivate       = "private"
+	ActionProtected     = "protected"
+	ActionPin           = "pin"
+	ActionOpen          = "open"
+	ActionNext          = "next"
+	ActionPrev          = "prev"
+	ActionBack          = "back"
+	ActionEdit          = "edit"
+	ActionDelete        = "delete"
+	ActionDeleteConfirm = "delete.confirm"
+	ActionTags          = "tags"
+	ActionTag           = "tag"
 
 	CommandStart  = "start"
 	CommandSearch = "search"
+	CommandList   = "list"
+	CommandTags   = "tags"
+	CommandCancel = "cancel"
+
+	BrowsePlaceholder = "_"
+)
+
+type BrowseView int
+
+const (
+	BrowseList BrowseView = iota
+	BrowseDetail
+	BrowseTags
+	BrowseConfirmDelete
+	BrowseEditPrompt
 )
 
 type MemoInfo struct {
@@ -83,7 +114,28 @@ type MemoInfo struct {
 }
 
 type MemoSummary struct {
-	Name    string
+	Name      string
+	Snippet   string
+	Content   string
+	UpdatedAt time.Time
+}
+
+type TagCount struct {
+	Name  string
+	Count int32
+}
+
+type BrowsePayload struct {
+	View    BrowseView
+	Tag     string
+	Query   string
+	Start   int
+	End     int
+	HasPrev bool
+	HasNext bool
+	Items   []MemoSummary
+	Tags    []TagCount
+	Memo    *MemoInfo
 	Content string
 }
 
@@ -94,7 +146,7 @@ type ActionHint struct {
 type OutboundMessage struct {
 	Kind    OutboundKind
 	Memo    *MemoInfo
-	Results []MemoSummary
+	Browse  *BrowsePayload
 	Actions []ActionHint
 	Error   string
 	User    string
@@ -106,5 +158,16 @@ func DefaultMemoActions() []ActionHint {
 		{Name: ActionPublic},
 		{Name: ActionPrivate},
 		{Name: ActionPin},
+	}
+}
+
+func IsBrowseAction(name string) bool {
+	switch name {
+	case ActionOpen, ActionNext, ActionPrev, ActionBack,
+		ActionEdit, ActionDelete, ActionDeleteConfirm,
+		ActionTags, ActionTag:
+		return true
+	default:
+		return false
 	}
 }

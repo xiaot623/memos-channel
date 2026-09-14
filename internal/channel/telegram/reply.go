@@ -18,6 +18,9 @@ func (a *Adapter) Reply(ctx context.Context, origin channel.Origin, msg channel.
 	if origin.AckID != "" {
 		return a.replyCallback(ctx, origin, msg)
 	}
+	if origin.Edit && msg.Kind == channel.OutboundBrowse {
+		return a.editBrowse(ctx, origin, msg)
+	}
 	return a.replyChat(ctx, origin, msg)
 }
 
@@ -62,6 +65,8 @@ func (a *Adapter) replyCallback(ctx context.Context, origin channel.Origin, msg 
 			Text:            "Memo updated",
 		})
 		return err
+	case channel.OutboundBrowse:
+		return a.editBrowse(ctx, origin, msg)
 	default:
 		_, err := a.bot.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
 			CallbackQueryID: origin.AckID,
@@ -101,23 +106,16 @@ func (a *Adapter) replyChat(ctx context.Context, origin channel.Origin, msg chan
 			Text:   msg.Error,
 		})
 		return err
-	case channel.OutboundSearchList:
-		if len(msg.Results) == 0 {
-			_, err := a.bot.SendMessage(ctx, &bot.SendMessageParams{
-				ChatID: chatID,
-				Text:   "No memos found for the specified search criteria.",
-			})
-			return err
+	case channel.OutboundBrowse:
+		if msg.Browse == nil {
+			return fmt.Errorf("missing browse payload")
 		}
-		for _, memo := range msg.Results {
-			if _, err := a.bot.SendMessage(ctx, &bot.SendMessageParams{
-				ChatID: chatID,
-				Text:   memo.Name + "\n" + memo.Content,
-			}); err != nil {
-				return err
-			}
-		}
-		return nil
+		_, err := a.bot.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID:      chatID,
+			Text:        browseText(msg.Browse),
+			ReplyMarkup: browseKeyboard(msg.Browse),
+		})
+		return err
 	case channel.OutboundSaved:
 		if msg.Memo == nil {
 			return fmt.Errorf("missing memo for saved reply")
@@ -137,6 +135,30 @@ func (a *Adapter) replyChat(ctx context.Context, origin channel.Origin, msg chan
 	default:
 		return nil
 	}
+}
+
+func (a *Adapter) editBrowse(ctx context.Context, origin channel.Origin, msg channel.OutboundMessage) error {
+	if msg.Browse == nil {
+		return fmt.Errorf("missing browse payload")
+	}
+	chatID, _ := strconv.ParseInt(origin.ChatID, 10, 64)
+	messageID, _ := strconv.Atoi(origin.MessageID)
+	_, err := a.bot.EditMessageText(ctx, &bot.EditMessageTextParams{
+		ChatID:      chatID,
+		MessageID:   messageID,
+		Text:        browseText(msg.Browse),
+		ReplyMarkup: browseKeyboard(msg.Browse),
+	})
+	if err != nil {
+		return err
+	}
+	if origin.AckID == "" {
+		return nil
+	}
+	_, err = a.bot.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
+		CallbackQueryID: origin.AckID,
+	})
+	return err
 }
 
 func usageText(prompt string) string {
