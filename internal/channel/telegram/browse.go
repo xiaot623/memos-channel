@@ -25,11 +25,7 @@ func browseText(b *channel.BrowsePayload) string {
 		}
 		return fmt.Sprintf("Tags · %d–%d", b.Start, b.End)
 	case channel.BrowseDetail:
-		text := strings.TrimSpace(b.Content)
-		if text == "" {
-			text = "(empty memo)"
-		}
-		return clipMessage(text)
+		return formatMemoContent(b.Content).Text
 	case channel.BrowseConfirmDelete:
 		return clipMessage(b.Content)
 	case channel.BrowseEditPrompt:
@@ -62,11 +58,18 @@ func browseKeyboard(b *channel.BrowsePayload) *models.InlineKeyboardMarkup {
 	case channel.BrowseTags:
 		return tagsKeyboard(b)
 	case channel.BrowseDetail:
-		return markupRows([][]models.InlineKeyboardButton{{
+		rows := [][]models.InlineKeyboardButton{{
 			browseButton("Back", channel.ActionBack),
 			browseButton("Edit", channel.ActionEdit),
 			browseButton("Delete", channel.ActionDelete),
-		}})
+		}}
+		if b.Memo != nil && b.Memo.URL != "" {
+			rows = append(rows, []models.InlineKeyboardButton{{
+				Text: "Open",
+				URL:  b.Memo.URL,
+			}})
+		}
+		return markupRows(rows)
 	case channel.BrowseConfirmDelete:
 		return markupRows([][]models.InlineKeyboardButton{{
 			browseButton("Yes", channel.ActionDeleteConfirm),

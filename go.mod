@@ -15,10 +15,14 @@ require (
 
 require (
 	connectrpc.com/connect v1.19.1
+	github.com/eekstunt/telegramify-markdown-go v0.2.0
 	golang.org/x/sync v0.23.0
 )
 
-require google.golang.org/genproto v0.0.0-20260316180232-0b37fe3546d5 // indirect
+require (
+	github.com/yuin/goldmark v1.8.2 // indirect
+	google.golang.org/genproto v0.0.0-20260316180232-0b37fe3546d5 // indirect
+)
 
 require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.28.0 // indirect

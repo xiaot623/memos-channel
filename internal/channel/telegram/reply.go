@@ -10,6 +10,10 @@ import (
 	"github.com/usememos/memogram/internal/channel"
 )
 
+var disableLinkPreview = &models.LinkPreviewOptions{IsDisabled: boolPtr(true)}
+
+func boolPtr(v bool) *bool { return &v }
+
 func (a *Adapter) Reply(ctx context.Context, origin channel.Origin, msg channel.OutboundMessage) error {
 	if a.bot == nil {
 		return fmt.Errorf("telegram bot is not started")
@@ -110,11 +114,17 @@ func (a *Adapter) replyChat(ctx context.Context, origin channel.Origin, msg chan
 		if msg.Browse == nil {
 			return fmt.Errorf("missing browse payload")
 		}
-		_, err := a.bot.SendMessage(ctx, &bot.SendMessageParams{
+		formatted := formatBrowse(msg.Browse)
+		params := &bot.SendMessageParams{
 			ChatID:      chatID,
-			Text:        browseText(msg.Browse),
+			Text:        formatted.Text,
+			Entities:    formatted.Entities,
 			ReplyMarkup: browseKeyboard(msg.Browse),
-		})
+		}
+		if msg.Browse.View == channel.BrowseDetail {
+			params.LinkPreviewOptions = disableLinkPreview
+		}
+		_, err := a.bot.SendMessage(ctx, params)
 		return err
 	case channel.OutboundSaved:
 		if msg.Memo == nil {
@@ -143,12 +153,18 @@ func (a *Adapter) editBrowse(ctx context.Context, origin channel.Origin, msg cha
 	}
 	chatID, _ := strconv.ParseInt(origin.ChatID, 10, 64)
 	messageID, _ := strconv.Atoi(origin.MessageID)
-	_, err := a.bot.EditMessageText(ctx, &bot.EditMessageTextParams{
+	formatted := formatBrowse(msg.Browse)
+	params := &bot.EditMessageTextParams{
 		ChatID:      chatID,
 		MessageID:   messageID,
-		Text:        browseText(msg.Browse),
+		Text:        formatted.Text,
+		Entities:    formatted.Entities,
 		ReplyMarkup: browseKeyboard(msg.Browse),
-	})
+	}
+	if msg.Browse.View == channel.BrowseDetail {
+		params.LinkPreviewOptions = disableLinkPreview
+	}
+	_, err := a.bot.EditMessageText(ctx, params)
 	if err != nil {
 		return err
 	}
