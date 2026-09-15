@@ -3,6 +3,7 @@ package feishu
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 	"sync"
@@ -87,7 +88,7 @@ func (a *Adapter) onMessage(ctx context.Context, event *larkim.P2MessageReceiveV
 		}
 	}
 	if !a.isUserAllowed(openID) {
-		_ = a.sendText(ctx, chatID, "你的账号无权使用此机器人")
+		_ = a.sendText(ctx, chatID, fmt.Sprintf("your account %s is not allowed to use this bot", openID))
 		return nil
 	}
 
@@ -95,7 +96,7 @@ func (a *Adapter) onMessage(ctx context.Context, event *larkim.P2MessageReceiveV
 	if err != nil {
 		slog.Error("feishu inbound", slog.Any("err", err))
 		if errors.Is(err, errUnsupportedType) {
-			_ = a.sendText(ctx, chatID, "暂不支持该消息类型")
+			_ = a.sendText(ctx, chatID, "unsupported message type")
 		}
 		return nil
 	}
@@ -129,7 +130,7 @@ func (a *Adapter) onCardAction(ctx context.Context, event *callback.CardActionTr
 	}
 
 	if !a.isUserAllowed(openID) {
-		return toastOnly("error", "你的账号无权使用此机器人"), nil
+		return toastOnly("error", fmt.Sprintf("your account %s is not allowed to use this bot", openID)), nil
 	}
 
 	actionValue := map[string]interface{}{}

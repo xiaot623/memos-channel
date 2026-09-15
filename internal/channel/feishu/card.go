@@ -15,7 +15,7 @@ const (
 
 func browseCard(b *channel.BrowsePayload) map[string]any {
 	if b == nil {
-		return newCard("", []any{markdownElement("没有找到备忘录。")})
+		return newCard("", []any{markdownElement("No memos found.")})
 	}
 	switch b.View {
 	case channel.BrowseTags:
@@ -26,15 +26,15 @@ func browseCard(b *channel.BrowsePayload) map[string]any {
 		return newCard("", []any{
 			markdownElement(clipCardMarkdown(b.Content)),
 			columnSet([]map[string]any{
-				callbackButton("是", channel.ActionDeleteConfirm, channel.BrowsePlaceholder, "danger"),
-				callbackButton("否", channel.ActionBack, channel.BrowsePlaceholder, "default"),
+				callbackButton("Yes", channel.ActionDeleteConfirm, channel.BrowsePlaceholder, "danger"),
+				callbackButton("No", channel.ActionBack, channel.BrowsePlaceholder, "default"),
 			}),
 		})
 	case channel.BrowseEditPrompt:
 		return newCard("", []any{
 			markdownElement(clipCardMarkdown(b.Content)),
 			columnSet([]map[string]any{
-				callbackButton("返回", channel.ActionBack, channel.BrowsePlaceholder, "default"),
+				callbackButton("Back", channel.ActionBack, channel.BrowsePlaceholder, "default"),
 			}),
 		})
 	default:
@@ -44,7 +44,7 @@ func browseCard(b *channel.BrowsePayload) map[string]any {
 
 func listCard(b *channel.BrowsePayload) map[string]any {
 	if len(b.Items) == 0 {
-		return newCard(browseListTitle(b), []any{markdownElement("没有找到备忘录。")})
+		return newCard(browseListTitle(b), []any{markdownElement("No memos found.")})
 	}
 	elements := make([]any, 0, len(b.Items)+1)
 	for i, item := range b.Items {
@@ -54,9 +54,9 @@ func listCard(b *channel.BrowsePayload) map[string]any {
 }
 
 func tagsCard(b *channel.BrowsePayload) map[string]any {
-	title := fmt.Sprintf("标签 · %d–%d", b.Start, b.End)
+	title := fmt.Sprintf("Tags · %d–%d", b.Start, b.End)
 	if len(b.Tags) == 0 {
-		return newCard(title, []any{markdownElement("没有标签。")})
+		return newCard(title, []any{markdownElement("No tags found.")})
 	}
 	elements := make([]any, 0, len(b.Tags)+1)
 	for i, tag := range b.Tags {
@@ -70,13 +70,13 @@ func detailCard(b *channel.BrowsePayload) map[string]any {
 	elements := []any{
 		markdownElement(clipCardMarkdown(b.Content)),
 		columnSet([]map[string]any{
-			callbackButton("返回", channel.ActionBack, channel.BrowsePlaceholder, "default"),
-			callbackButton("编辑", channel.ActionEdit, channel.BrowsePlaceholder, "default"),
-			callbackButton("删除", channel.ActionDelete, channel.BrowsePlaceholder, "danger"),
+			callbackButton("Back", channel.ActionBack, channel.BrowsePlaceholder, "default"),
+			callbackButton("Edit", channel.ActionEdit, channel.BrowsePlaceholder, "default"),
+			callbackButton("Delete", channel.ActionDelete, channel.BrowsePlaceholder, "danger"),
 		}),
 	}
 	if b.Memo != nil && b.Memo.URL != "" {
-		elements = append(elements, urlButton("打开", b.Memo.URL))
+		elements = append(elements, urlButton("Open", b.Memo.URL))
 	}
 	return newCard("", elements)
 }
@@ -84,9 +84,9 @@ func detailCard(b *channel.BrowsePayload) map[string]any {
 func savedCard(prefix string, memo *channel.MemoInfo, actions []channel.ActionHint) map[string]any {
 	body := prefix
 	if memo.URL != "" {
-		body = fmt.Sprintf("%s为 %s：[%s](%s)", prefix, memo.Visibility, memo.Name, memo.URL)
+		body = fmt.Sprintf("%s as %s with [%s](%s)", prefix, memo.Visibility, memo.Name, memo.URL)
 	} else {
-		body = fmt.Sprintf("%s为 %s：%s", prefix, memo.Visibility, memo.Name)
+		body = fmt.Sprintf("%s as %s with %s", prefix, memo.Visibility, memo.Name)
 	}
 	if memo.Pinned {
 		body += " 📌"
@@ -116,11 +116,11 @@ func savedButtons(actions []channel.ActionHint, memoName string) []map[string]an
 func actionLabel(name string) string {
 	switch name {
 	case channel.ActionPublic:
-		return "公开"
+		return "Public"
 	case channel.ActionPrivate:
-		return "私密"
+		return "Private"
 	case channel.ActionPin:
-		return "置顶"
+		return "Pin"
 	default:
 		return ""
 	}
@@ -130,24 +130,24 @@ func browseListTitle(b *channel.BrowsePayload) string {
 	rangeLabel := fmt.Sprintf("%d–%d", b.Start, b.End)
 	switch {
 	case b.Query != "":
-		return fmt.Sprintf("搜索 · %s · %s", b.Query, rangeLabel)
+		return fmt.Sprintf("Search · %s · %s", b.Query, rangeLabel)
 	case b.Tag != "":
-		return fmt.Sprintf("标签 · #%s · %s", b.Tag, rangeLabel)
+		return fmt.Sprintf("Tag · #%s · %s", b.Tag, rangeLabel)
 	default:
-		return "备忘录 · 最近更新 · " + rangeLabel
+		return "Memos · updated · " + rangeLabel
 	}
 }
 
 func appendNav(elements []any, b *channel.BrowsePayload, tagsShortcut bool) []any {
 	nav := make([]map[string]any, 0, 3)
 	if b.HasPrev {
-		nav = append(nav, callbackButton("上一页", channel.ActionPrev, channel.BrowsePlaceholder, "default"))
+		nav = append(nav, callbackButton("Prev", channel.ActionPrev, channel.BrowsePlaceholder, "default"))
 	}
 	if tagsShortcut && b.Tag != "" {
-		nav = append(nav, callbackButton("标签", channel.ActionTags, channel.BrowsePlaceholder, "default"))
+		nav = append(nav, callbackButton("Tags", channel.ActionTags, channel.BrowsePlaceholder, "default"))
 	}
 	if b.HasNext {
-		nav = append(nav, callbackButton("下一页", channel.ActionNext, channel.BrowsePlaceholder, "default"))
+		nav = append(nav, callbackButton("Next", channel.ActionNext, channel.BrowsePlaceholder, "default"))
 	}
 	if len(nav) == 0 {
 		return elements
@@ -182,7 +182,7 @@ func listPreview(item channel.MemoSummary) string {
 func truncateRunes(s string, max int) string {
 	s = strings.Join(strings.Fields(s), " ")
 	if s == "" {
-		return "无标题"
+		return "Untitled"
 	}
 	runes := []rune(s)
 	if max < 1 || len(runes) <= max {
@@ -194,7 +194,7 @@ func truncateRunes(s string, max int) string {
 func clipCardMarkdown(s string) string {
 	s = strings.TrimSpace(s)
 	if s == "" {
-		return "（空备忘录）"
+		return "(empty memo)"
 	}
 	runes := []rune(s)
 	if len(runes) <= cardMaxRunes {

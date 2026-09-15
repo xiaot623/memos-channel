@@ -18,7 +18,7 @@ func TestTruncateButtonFlattensAndEllipsizes(t *testing.T) {
 	if got != "abcdefghijklmnopqrstuvwxyz01..." {
 		t.Fatalf("ellipsize: got %q", got)
 	}
-	if got := truncateRunes("   ", buttonMaxRunes); got != "无标题" {
+	if got := truncateRunes("   ", buttonMaxRunes); got != "Untitled" {
 		t.Fatalf("empty: got %q", got)
 	}
 }
@@ -35,7 +35,7 @@ func TestListButtonTextPrefixesMMDD(t *testing.T) {
 }
 
 func TestClipCardMarkdown(t *testing.T) {
-	if got := clipCardMarkdown("  "); got != "（空备忘录）" {
+	if got := clipCardMarkdown("  "); got != "(empty memo)" {
 		t.Fatalf("empty: %q", got)
 	}
 	long := strings.Repeat("a", cardMaxRunes+10)
@@ -71,7 +71,7 @@ func TestBrowseCardCallbackValues(t *testing.T) {
 }
 
 func TestSavedCardActions(t *testing.T) {
-	card := savedCard("已保存", &channel.MemoInfo{Name: "memos/abc", Visibility: "PRIVATE"}, channel.DefaultMemoActions())
+	card := savedCard("Content saved", &channel.MemoInfo{Name: "memos/abc", Visibility: "PRIVATE"}, channel.DefaultMemoActions())
 	body := card["body"].(map[string]any)
 	elements := body["elements"].([]any)
 	if len(elements) != 2 {

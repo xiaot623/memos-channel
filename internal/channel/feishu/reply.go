@@ -46,8 +46,8 @@ func callbackResponse(msg channel.OutboundMessage) (*callback.CardActionTriggerR
 			return nil, fmt.Errorf("missing memo for saved reply")
 		}
 		return &callback.CardActionTriggerResponse{
-			Toast: &callback.Toast{Type: "info", Content: "已更新"},
-			Card:  rawCard(savedCard("已更新", msg.Memo, msg.Actions)),
+			Toast: &callback.Toast{Type: "info", Content: "Memo updated"},
+			Card:  rawCard(savedCard("Memo updated", msg.Memo, msg.Actions)),
 		}, nil
 	case channel.OutboundBrowse:
 		if msg.Browse == nil {
@@ -57,7 +57,7 @@ func callbackResponse(msg channel.OutboundMessage) (*callback.CardActionTriggerR
 			Card: rawCard(browseCard(msg.Browse)),
 		}, nil
 	default:
-		return toastOnly("info", "已更新"), nil
+		return toastOnly("info", "Memo updated"), nil
 	}
 }
 
@@ -78,7 +78,7 @@ func (a *Adapter) replyChat(ctx context.Context, origin channel.Origin, msg chan
 	case channel.OutboundPromptUsage:
 		return a.sendText(ctx, origin.ChatID, usageText(msg.Prompt))
 	case channel.OutboundBound:
-		return a.sendText(ctx, origin.ChatID, fmt.Sprintf("你好，%s！", msg.User))
+		return a.sendText(ctx, origin.ChatID, fmt.Sprintf("Hello %s!", msg.User))
 	case channel.OutboundError:
 		return a.sendText(ctx, origin.ChatID, msg.Error)
 	case channel.OutboundBrowse:
@@ -90,7 +90,7 @@ func (a *Adapter) replyChat(ctx context.Context, origin channel.Origin, msg chan
 		if msg.Memo == nil {
 			return fmt.Errorf("missing memo for saved reply")
 		}
-		card := savedCard("已保存", msg.Memo, msg.Actions)
+		card := savedCard("Content saved", msg.Memo, msg.Actions)
 		if origin.MessageID != "" {
 			if err := a.replyCard(ctx, origin.MessageID, card); err == nil {
 				return nil
@@ -103,15 +103,15 @@ func (a *Adapter) replyChat(ctx context.Context, origin channel.Origin, msg chan
 }
 
 func promptBindText() string {
-	return "请先发送 /start <access_token> 绑定 Memos"
+	return "Please start the bot with /start <access_token>"
 }
 
 func usageText(prompt string) string {
 	switch prompt {
 	case channel.CommandSearch:
-		return "用法：/search <关键词>"
+		return "Usage: /search <words>"
 	default:
-		return "用法：/start <access_token>"
+		return "Usage: /start <access_token>"
 	}
 }
 
