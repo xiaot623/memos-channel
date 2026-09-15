@@ -12,12 +12,16 @@ import (
 )
 
 type Config struct {
-	ServerAddr       string `env:"SERVER_ADDR,required"`
-	PublicURL        string `env:"BASE_URL"`
-	Data             string `env:"DATA"`
-	BotToken         string `env:"BOT_TOKEN"`
-	BotProxyAddr     string `env:"BOT_PROXY_ADDR"`
-	AllowedUsernames string `env:"ALLOWED_USERNAMES"`
+	ServerAddr           string `env:"SERVER_ADDR,required"`
+	PublicURL            string `env:"BASE_URL"`
+	Data                 string `env:"DATA"`
+	BotToken             string `env:"BOT_TOKEN"`
+	BotProxyAddr         string `env:"BOT_PROXY_ADDR"`
+	AllowedUsernames     string `env:"ALLOWED_USERNAMES"`
+	FeishuAppID          string `env:"FEISHU_APP_ID"`
+	FeishuAppSecret      string `env:"FEISHU_APP_SECRET"`
+	FeishuBaseURL        string `env:"FEISHU_BASE_URL"`
+	FeishuAllowedOpenIDs string `env:"FEISHU_ALLOWED_OPEN_IDS"`
 }
 
 func Load() (*Config, error) {
@@ -82,4 +86,8 @@ func HTTPSOrigin(s string) string {
 
 func (c *Config) TelegramEnabled() bool {
 	return c.BotToken != ""
+}
+
+func (c *Config) FeishuEnabled() bool {
+	return strings.TrimSpace(c.FeishuAppID) != "" && strings.TrimSpace(c.FeishuAppSecret) != ""
 }

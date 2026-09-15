@@ -16,10 +16,13 @@ require (
 require (
 	connectrpc.com/connect v1.19.1
 	github.com/eekstunt/telegramify-markdown-go v0.2.0
+	github.com/larksuite/oapi-sdk-go/v3 v3.12.0
 	golang.org/x/sync v0.23.0
 )
 
 require (
+	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/yuin/goldmark v1.8.2 // indirect
 	google.golang.org/genproto v0.0.0-20260316180232-0b37fe3546d5 // indirect
 )

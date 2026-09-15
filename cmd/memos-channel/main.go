@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/usememos/memogram/internal/channel/feishu"
 	"github.com/usememos/memogram/internal/channel/telegram"
 	"github.com/usememos/memogram/internal/config"
 	"github.com/usememos/memogram/internal/core"
@@ -31,6 +32,14 @@ func main() {
 			Token:            cfg.BotToken,
 			ProxyAddr:        cfg.BotProxyAddr,
 			AllowedUsernames: cfg.AllowedUsernames,
+		}))
+	}
+	if cfg.FeishuEnabled() {
+		c.Register(feishu.New(feishu.Options{
+			AppID:          cfg.FeishuAppID,
+			AppSecret:      cfg.FeishuAppSecret,
+			BaseURL:        cfg.FeishuBaseURL,
+			AllowedOpenIDs: cfg.FeishuAllowedOpenIDs,
 		}))
 	}
 

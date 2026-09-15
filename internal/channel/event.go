@@ -7,6 +7,7 @@ import (
 
 const (
 	Telegram = "telegram"
+	Feishu   = "feishu"
 )
 
 type Kind int
