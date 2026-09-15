@@ -110,6 +110,8 @@ func usageText(prompt string) string {
 	switch prompt {
 	case channel.CommandSearch:
 		return "Usage: /search <words>"
+	case channel.CommandHelp:
+		return channel.HelpText()
 	default:
 		return "Usage: /start <access_token>"
 	}

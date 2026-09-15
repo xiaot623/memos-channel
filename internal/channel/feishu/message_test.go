@@ -20,6 +20,8 @@ func TestParseCommand(t *testing.T) {
 		{in: "/search hello world", want: channel.Command{Name: channel.CommandSearch, Args: "hello world"}, wantOK: true},
 		{in: "/tags", want: channel.Command{Name: channel.CommandTags}, wantOK: true},
 		{in: "/cancel extra", want: channel.Command{Name: channel.CommandCancel, Args: "extra"}, wantOK: true},
+		{in: "/help", want: channel.Command{Name: channel.CommandHelp}, wantOK: true},
+		{in: "/HELP", want: channel.Command{Name: channel.CommandHelp}, wantOK: true},
 		{in: "/unknown", wantOK: false},
 		{in: "not a command", wantOK: false},
 	}

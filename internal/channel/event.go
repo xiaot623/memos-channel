@@ -92,6 +92,7 @@ const (
 	CommandList   = "list"
 	CommandTags   = "tags"
 	CommandCancel = "cancel"
+	CommandHelp   = "help"
 
 	BrowsePlaceholder = "_"
 )
@@ -160,6 +161,16 @@ func DefaultMemoActions() []ActionHint {
 		{Name: ActionPrivate},
 		{Name: ActionPin},
 	}
+}
+
+func HelpText() string {
+	return "Available commands:\n" +
+		"/start <access_token> - Bind your Memos account\n" +
+		"/list - List latest memos\n" +
+		"/tags - Browse memos by tag\n" +
+		"/search <words> - Search for memos\n" +
+		"/cancel - Cancel the current operation\n" +
+		"/help - Show this help"
 }
 
 func IsBrowseAction(name string) bool {

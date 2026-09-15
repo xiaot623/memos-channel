@@ -31,7 +31,7 @@ func parseCommand(text string) (channel.Command, bool) {
 	}
 	name = strings.TrimPrefix(name, "/")
 	switch name {
-	case channel.CommandStart, channel.CommandSearch, channel.CommandList, channel.CommandTags, channel.CommandCancel:
+	case channel.CommandStart, channel.CommandSearch, channel.CommandList, channel.CommandTags, channel.CommandCancel, channel.CommandHelp:
 		return channel.Command{Name: name, Args: strings.TrimSpace(args)}, true
 	default:
 		return channel.Command{}, false

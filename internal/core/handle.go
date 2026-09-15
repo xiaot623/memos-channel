@@ -63,6 +63,8 @@ func (c *Core) Handle(ctx context.Context, ev channel.InboundEvent) error {
 			c.handleTags(ctx, ev)
 		case channel.CommandCancel:
 			c.handleCancel(ctx, ev)
+		case channel.CommandHelp:
+			c.handleHelp(ctx, ev)
 		default:
 			c.reply(ctx, ev, channel.OutboundMessage{Kind: channel.OutboundError, Error: "Unknown command"})
 		}

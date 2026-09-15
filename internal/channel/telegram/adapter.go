@@ -61,6 +61,7 @@ func (a *Adapter) Start(ctx context.Context, handle channel.HandleFunc) error {
 		{Command: "list", Description: "List latest memos"},
 		{Command: "tags", Description: "Browse memos by tag"},
 		{Command: "search", Description: "Search for the memos"},
+		{Command: "help", Description: "Show available commands"},
 	}
 	if _, err := a.bot.SetMyCommands(ctx, &bot.SetMyCommandsParams{Commands: commands}); err != nil {
 		slog.Error("failed to set bot commands", slog.Any("err", err))
@@ -185,6 +186,12 @@ func (a *Adapter) messageEvent(m *models.Update) channel.InboundEvent {
 		ev.Kind = channel.KindCommand
 		ev.Command = channel.Command{
 			Name: channel.CommandCancel,
+		}
+		return ev
+	case text == "/help" || strings.HasPrefix(text, "/help "):
+		ev.Kind = channel.KindCommand
+		ev.Command = channel.Command{
+			Name: channel.CommandHelp,
 		}
 		return ev
 	}
